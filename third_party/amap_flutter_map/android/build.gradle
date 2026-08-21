@@ -1,0 +1,24 @@
+group 'com.amap.flutter.amap_flutter_map'
+version '1.0'
+
+// 原脚本使用 jcenter()（Gradle 9 已移除）和 AGP 3.5 buildscript，
+// 与本项目 Gradle 9.3.1 / AGP 9 不兼容，已精简为当前项目可用的配置。
+// 仓库统一由项目根 settings.gradle 提供（阿里云镜像 + 高德官方仓库）。
+apply plugin: 'com.android.library'
+
+android {
+    namespace 'com.amap.flutter.amap_flutter_map'
+    compileSdkVersion 36
+
+    defaultConfig {
+        minSdkVersion 16
+    }
+    lintOptions {
+        disable 'InvalidPackage'
+    }
+}
+
+dependencies {
+    // 编译期与运行时统一使用 11.2.100（宿主 app 本地 libs 合包），避免 9.7.0 编译/11.2.100 运行的 API 差异
+    compileOnly files("../../../android/app/libs/AMap3DMap_11.2.100_AMapSearch_9.8.1_AMapLocation_11.2.100_20260805.jar")
+}
