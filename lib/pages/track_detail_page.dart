@@ -5,13 +5,11 @@ import 'package:amap_flutter_base/amap_flutter_base.dart';
 import 'package:amap_flutter_map/amap_flutter_map.dart';
 import 'package:flutter/material.dart';
 
+import '../config/api_config.dart';
 import '../models/track.dart';
 import '../models/track_point.dart';
 import '../services/track_database.dart';
 import '../utils/geo_convert.dart';
-
-/// 高德开放平台 key（Android 与 iOS 各自配置于原生工程，这里也显式传入）
-const _amapAndroidKey = '63685292a3461efb50f5e1780f9866fc';
 
 /// 轨迹详情页：高德地图渲染轨迹路径 + 起终点实心圆 + 坐标点列表
 class TrackDetailPage extends StatefulWidget {
@@ -156,9 +154,25 @@ class _TrackDetailPageState extends State<TrackDetailPage> {
   }
 
   /// 高德地图：蓝色路径 + 起终点实心圆
+  ///
+  /// <p>key 未配置时给一句明确说明，不静默渲染空白地图——
+  /// 空白地图看起来像"地图坏了"，而实际原因是构建时没带 --dart-define。</p>
   Widget _buildMap() {
+    if (!ApiConfig.hasAmapKey) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(24),
+          child: Text(
+            '未配置高德地图 key。\n'
+            '构建时请带 --dart-define=AMAP_KEY=你的key，详见 README。',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: Colors.grey),
+          ),
+        ),
+      );
+    }
     return AMapWidget(
-      apiKey: const AMapApiKey(androidKey: _amapAndroidKey),
+      apiKey: AMapApiKey(androidKey: ApiConfig.amapKey),
       privacyStatement: const AMapPrivacyStatement(
         hasContains: true,
         hasShow: true,

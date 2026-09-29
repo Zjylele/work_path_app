@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../services/api_client.dart';
 import '../services/auth_service.dart';
 import 'home_page.dart';
+import 'register_page.dart';
 
 /// 登录页面
 ///
@@ -25,6 +27,9 @@ class _LoginPageState extends State<LoginPage> {
   /// 密码是否以密文形式显示
   bool _obscurePassword = true;
 
+  /// 登录请求是否进行中（防止重复提交）
+  bool _loading = false;
+
   /// 输入框与登录按钮的固定宽度（不占满屏幕宽度）
   static const double _fieldWidth = 300;
 
@@ -35,35 +40,46 @@ class _LoginPageState extends State<LoginPage> {
     super.dispose();
   }
 
-  /// 登录按钮点击逻辑：校验登录信息，正确则跳转首页，错误则弹出提示
+  /// 登录按钮点击逻辑：调后端校验，成功跳首页，失败弹提示
   Future<void> _handleLogin() async {
+    if (_loading) return;
     final username = _usernameController.text.trim();
     final password = _passwordController.text.trim();
 
-    // 阶段一：本地内置账号校验（admin/123456）
-    // TODO: 阶段二接入真实登录接口后，替换为请求后端校验
-    final ok = await AuthService.instance.login(username, password);
-    if (!mounted) return;
-    if (ok) {
+    if (username.isEmpty || password.isEmpty) {
+      _showLoginFailedDialog('请输入用户名和密码');
+      return;
+    }
+
+    setState(() => _loading = true);
+    try {
+      await AuthService.instance.login(username, password);
+      if (!mounted) return;
       Navigator.of(context).pushReplacement(
         MaterialPageRoute<void>(builder: (_) => HomePage(username: username)),
       );
-    } else {
-      _showLoginFailedDialog();
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      _showLoginFailedDialog(e.message);
+    } catch (_) {
+      if (!mounted) return;
+      _showLoginFailedDialog('登录失败，请稍后重试');
+    } finally {
+      if (mounted) setState(() => _loading = false);
     }
   }
 
-  /// 显示"登录失败，用户名或密码错误"底部提示，2 秒后自动消失
-  void _showLoginFailedDialog() {
+  /// 显示登录失败提示，2 秒后自动消失
+  void _showLoginFailedDialog(String message) {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(
-        const SnackBar(
+        SnackBar(
           content: Text(
-            '登录失败，用户名或密码错误',
+            message,
             textAlign: TextAlign.center,
           ),
-          duration: Duration(seconds: 2),
+          duration: const Duration(seconds: 2),
         ),
       );
   }
@@ -74,8 +90,17 @@ class _LoginPageState extends State<LoginPage> {
       body: Stack(
         fit: StackFit.expand,
         children: [
-          // 背景图层：目前为粉色占位，后续插入背景图时替换此处即可
-          widget.background ?? const ColoredBox(color: Color(0xFF898989)),
+          // 背景图层：蓝→粉渐变；后续插入背景图时替换此处即可
+          widget.background ??
+              const DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [Color(0xFF73ACF6), Color(0xFFF8BBD0)],
+                  ),
+                ),
+              ),
           SafeArea(
             child: Center(
               child: SingleChildScrollView(
@@ -102,7 +127,22 @@ class _LoginPageState extends State<LoginPage> {
                     const SizedBox(height: 32),
                     SizedBox(width: _fieldWidth, child: _buildLoginButton()),
                     const SizedBox(height: 16),
-                    const Center(child: _LinkText('注册账号')),
+                    // 注册入口：跳转注册页，注册成功后回登录页手动登录
+                    Center(
+                      child: GestureDetector(
+                        onTap: () async {
+                          await Navigator.of(context).push(
+                            MaterialPageRoute<bool>(
+                              builder: (_) => const RegisterPage(),
+                            ),
+                          );
+                        },
+                        child: const Padding(
+                          padding: EdgeInsets.all(8),
+                          child: _LinkText('注册账号'),
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -176,10 +216,10 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
-  /// 登录按钮：蓝色背景、圆角矩形、白色居中文字
+  /// 登录按钮：蓝色背景、圆角矩形、白色居中文字；加载中显示转圈并禁用
   Widget _buildLoginButton() {
     return FilledButton(
-      onPressed: _handleLogin,
+      onPressed: _loading ? null : _handleLogin,
       style: FilledButton.styleFrom(
         backgroundColor: const Color(0xFF73ACF6),
         padding: const EdgeInsets.symmetric(vertical: 14),
@@ -187,10 +227,19 @@ class _LoginPageState extends State<LoginPage> {
           borderRadius: BorderRadius.circular(24),
         ),
       ),
-      child: const Text(
-        '登录',
-        style: TextStyle(color: Colors.white, fontSize: 18),
-      ),
+      child: _loading
+          ? const SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: Colors.white,
+              ),
+            )
+          : const Text(
+              '登录',
+              style: TextStyle(color: Colors.white, fontSize: 18),
+            ),
     );
   }
 }

@@ -37,15 +37,25 @@ class TrackDatabase {
     _db = await factory.openDatabase(
       dbPath,
       options: OpenDatabaseOptions(
-        version: 1,
+        version: 2,
         onConfigure: (db) async {
           // 开启外键约束，支持级联删除
           await db.execute('PRAGMA foreign_keys = ON');
         },
         onCreate: _onCreate,
+        onUpgrade: _onUpgrade,
       ),
     );
     return _db!;
+  }
+
+  /// 数据库升级：v1 → v2 新增 upload_status 列（轨迹上传状态）
+  Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      await db.execute(
+        "ALTER TABLE track ADD COLUMN upload_status INTEGER NOT NULL DEFAULT 0",
+      );
+    }
   }
 
   Future<void> _onCreate(Database db, int version) async {
@@ -56,7 +66,8 @@ class TrackDatabase {
         start_time TEXT NOT NULL,
         end_time TEXT,
         status TEXT NOT NULL DEFAULT 'ongoing',
-        distance REAL
+        distance REAL,
+        upload_status INTEGER NOT NULL DEFAULT 0
       )
     ''');
     await db.execute('''
@@ -115,6 +126,29 @@ class TrackDatabase {
   Future<int> updateTrack(Track track) async {
     final db = await database;
     return db.update('track', track.toMap(), where: 'id = ?', whereArgs: [track.id]);
+  }
+
+  /// 更新轨迹上传状态（0=待上传 1=已上传 2=上传失败）
+  Future<int> updateUploadStatus(String id, int status) async {
+    final db = await database;
+    return db.update(
+      'track',
+      {'upload_status': status},
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  /// 查询待上传/上传失败的已完成轨迹（补传队列用，按开始时间升序）
+  Future<List<Track>> getUnuploadedTracks() async {
+    final db = await database;
+    final rows = await db.query(
+      'track',
+      where: "status = 'finished' AND upload_status != ?",
+      whereArgs: [1],
+      orderBy: 'start_time ASC',
+    );
+    return rows.map(Track.fromMap).toList();
   }
 
   /// 删除轨迹（级联删除其轨迹点），返回受影响行数

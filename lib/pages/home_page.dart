@@ -48,6 +48,19 @@ class _HomePageState extends State<HomePage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
+                    // 顶部问候语
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      child: Text(
+                        '你好，${widget.username ?? ''}',
+                        style: const TextStyle(
+                          color: Colors.black87,
+                          fontSize: 22,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
                     _buildStartRecordButton(),
                     const SizedBox(height: 32),
                     _buildMyTracksCard(context),
@@ -80,16 +93,22 @@ class _HomePageState extends State<HomePage> {
         height: 90,
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: Colors.white,
-          border: Border.all(color: Colors.black, width: 1),
+          color: const Color(0xFF73ACF6),
           borderRadius: BorderRadius.circular(24),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x3373ACF6),
+              blurRadius: 12,
+              offset: Offset(0, 4),
+            ),
+          ],
         ),
         child: const Text(
           '开始记录工作轨迹',
           style: TextStyle(
-            color: Colors.black,
+            color: Colors.white,
             fontSize: 20,
-            fontWeight: FontWeight.w500,
+            fontWeight: FontWeight.w600,
           ),
         ),
       ),
@@ -112,7 +131,7 @@ class _HomePageState extends State<HomePage> {
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: Colors.white,
-          border: Border.all(color: Colors.black, width: 1),
+          border: Border.all(color: const Color(0xFFBBD3F8), width: 1),
           borderRadius: BorderRadius.circular(24),
         ),
         child: Column(

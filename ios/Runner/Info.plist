@@ -49,8 +49,14 @@
 	</dict>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>需要定位权限以记录您的工作轨迹</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>需要始终允许定位权限，以便熄屏后仍能持续记录您的工作轨迹</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>location</string>
+	</array>
 	<key>amap_key</key>
-	<string>63685292a3461efb50f5e1780f9866fc</string>
+	<string>$(AMAP_API_KEY)</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>UILaunchStoryboardName</key>

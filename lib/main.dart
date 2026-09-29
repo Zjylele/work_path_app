@@ -2,10 +2,25 @@ import 'package:flutter/material.dart';
 
 import 'pages/home_page.dart';
 import 'pages/login_page.dart';
+import 'services/api_client.dart';
 import 'services/auth_service.dart';
+import 'services/track_upload_service.dart';
+
+/// 全局导航 Key：供非组件层（如 401 拦截回调）跳转页面使用
+final GlobalKey<NavigatorState> appNavigatorKey = GlobalKey<NavigatorState>();
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
+  // 监听网络恢复：联网后自动补传本地未上传的轨迹
+  TrackUploadService.instance.watchConnectivity();
+  // 运行期 token 失效（401）统一处理：清登录态并跳转登录页
+  ApiClient.instance.onUnauthorized = () {
+    AuthService.instance.clearLocalLogin();
+    appNavigatorKey.currentState?.pushAndRemoveUntil(
+      MaterialPageRoute<void>(builder: (_) => const LoginPage()),
+      (route) => false,
+    );
+  };
   // 立即 runApp，避免启动阻塞导致黑屏；
   // 登录态在 _StartupGate 中异步加载，加载期间显示 loading 页。
   runApp(const MyApp());
@@ -19,6 +34,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: '工作轨迹',
       debugShowCheckedModeBanner: false,
+      navigatorKey: appNavigatorKey,
       theme: ThemeData(
         useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF73ACF6)),
@@ -50,7 +66,8 @@ class _StartupGateState extends State<_StartupGate> {
 
   Future<void> _checkLoginState() async {
     try {
-      final loggedIn = await AuthService.instance.isLoggedIn();
+      // 有 token 且有效（或网络异常放行）→ 进首页；无 token / token 失效 → 登录页
+      final loggedIn = await AuthService.instance.validateOnStartup();
       final username = await AuthService.instance.getUsername();
       if (mounted) {
         setState(() {
@@ -58,6 +75,10 @@ class _StartupGateState extends State<_StartupGate> {
           _loggedIn = loggedIn;
           _username = username;
         });
+      }
+      // 已登录：异步补传本地未上传的轨迹（失败不影响进入首页）
+      if (loggedIn) {
+        TrackUploadService.instance.uploadPending();
       }
     } catch (_) {
       // 登录态读取失败时按未登录处理，保证 App 可进入

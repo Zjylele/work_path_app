@@ -69,6 +69,17 @@ AMAP_API_KEY=你的高德Key
 
 > 若未配置，构建不会报错，但地图因 Key 无效而无法加载。
 
+### Dart 侧同样需要注入
+
+Flutter 的 `amap_flutter_map` 插件在 Widget 构造时还会读一次 key，所以**除 Gradle 外，运行/构建时还要带 `--dart-define`**：
+
+```bash
+flutter run --dart-define=AMAP_KEY=你的高德Key
+flutter build apk --release --dart-define=AMAP_KEY=你的高德Key
+```
+
+Dart 侧从 `lib/config/api_config.dart` 的 `ApiConfig.amapKey` 读取该值。**不要把 key 写死在源码里**——key 是账号级凭据，一旦进 git 历史就只能去高德控制台重置才能真正止损。未带 `--dart-define` 时，轨迹详情页会明确提示"未配置高德地图 key"，不会静默显示空白地图。
+
 ## 注意事项
 
 - **高德 SDK 仅支持 ARM 架构**：x86 模拟器无法显示地图，请使用真机调试

@@ -160,4 +160,63 @@ void main() {
     // 外键级联删除轨迹点
     expect(await db.getTrackPoints('t1'), isEmpty);
   });
+
+  test('新轨迹默认待上传，upload_status 可更新', () async {
+    final db = TrackDatabase.instance;
+    await db.insertTrack(
+      Track(id: 't1', userId: 'admin', startTime: DateTime(2026, 8, 19, 9)),
+    );
+    expect((await db.getTrack('t1'))!.uploadStatus, 0);
+
+    await db.updateUploadStatus('t1', 2);
+    expect((await db.getTrack('t1'))!.uploadStatus, 2);
+
+    await db.updateUploadStatus('t1', 1);
+    expect((await db.getTrack('t1'))!.uploadStatus, 1);
+  });
+
+  test('getUnuploadedTracks 只返回已完成且未上传的轨迹', () async {
+    final db = TrackDatabase.instance;
+    // 已完成、待上传
+    await db.insertTrack(
+      Track(
+        id: 't1',
+        userId: 'admin',
+        startTime: DateTime(2026, 8, 19, 8),
+        status: 'finished',
+      ),
+    );
+    // 已完成、上传失败
+    await db.insertTrack(
+      Track(
+        id: 't2',
+        userId: 'admin',
+        startTime: DateTime(2026, 8, 19, 9),
+        status: 'finished',
+        uploadStatus: 2,
+      ),
+    );
+    // 已完成、已上传 → 不应出现
+    await db.insertTrack(
+      Track(
+        id: 't3',
+        userId: 'admin',
+        startTime: DateTime(2026, 8, 19, 10),
+        status: 'finished',
+        uploadStatus: 1,
+      ),
+    );
+    // 进行中 → 不应出现
+    await db.insertTrack(
+      Track(
+        id: 't4',
+        userId: 'admin',
+        startTime: DateTime(2026, 8, 19, 11),
+        status: 'ongoing',
+      ),
+    );
+
+    final pending = await db.getUnuploadedTracks();
+    expect(pending.map((t) => t.id).toList(), ['t1', 't2']);
+  });
 }

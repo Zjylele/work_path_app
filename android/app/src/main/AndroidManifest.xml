@@ -2,6 +2,16 @@
     <!-- 定位权限：用于轨迹采集 -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
+    <!-- Android 10+ 后台定位：熄屏后继续采集轨迹（需用户在系统设置中授权「始终允许」） -->
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION"/>
+    <!-- 前台服务：geolocator 定位前台服务保活，熄屏时位置流不被 Doze 冻结 -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
+    <!-- Android 12+：定位类型前台服务必需 -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION"/>
+    <!-- Android 14+：使用高精度定位的前台服务必需 -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_FINE_LOCATION"/>
+    <!-- 保持 CPU 唤醒，避免熄屏后系统休眠导致采点中断 -->
+    <uses-permission android:name="android.permission.WAKE_LOCK"/>
     <!-- 高德地图：网络访问与地图缓存 -->
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
@@ -9,7 +19,8 @@
     <application
         android:label="work_path_test"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:usesCleartextTraffic="true">
         <!-- 高德地图 API Key（从 local.properties 的 AMAP_API_KEY 注入，不提交明文） -->
         <meta-data
             android:name="com.amap.api.v2.apikey"

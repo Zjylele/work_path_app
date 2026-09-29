@@ -7,6 +7,7 @@ class Track {
     this.endTime,
     this.status = 'ongoing',
     this.distance,
+    this.uploadStatus = 0,
   });
 
   /// 主键（UUID）
@@ -27,6 +28,9 @@ class Track {
   /// 总里程（米，可选）
   final double? distance;
 
+  /// 上传状态：0=待上传 / 1=已上传 / 2=上传失败
+  final int uploadStatus;
+
   /// 是否已完成
   bool get isFinished => status == 'finished';
 
@@ -38,6 +42,7 @@ class Track {
       'end_time': endTime?.toIso8601String(),
       'status': status,
       'distance': distance,
+      'upload_status': uploadStatus,
     };
   }
 
@@ -51,6 +56,7 @@ class Track {
           : DateTime.parse(map['end_time'] as String),
       status: (map['status'] as String?) ?? 'ongoing',
       distance: (map['distance'] as num?)?.toDouble(),
+      uploadStatus: (map['upload_status'] as num?)?.toInt() ?? 0,
     );
   }
 
@@ -61,6 +67,7 @@ class Track {
     DateTime? endTime,
     String? status,
     double? distance,
+    int? uploadStatus,
     bool clearEndTime = false,
   }) {
     return Track(
@@ -70,6 +77,7 @@ class Track {
       endTime: clearEndTime ? null : (endTime ?? this.endTime),
       status: status ?? this.status,
       distance: distance ?? this.distance,
+      uploadStatus: uploadStatus ?? this.uploadStatus,
     );
   }
 }
