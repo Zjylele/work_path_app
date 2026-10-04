@@ -1,5 +1,8 @@
 // TrackDatabase 的 CRUD 单元测试。
-// 使用 sqflite_common_ffi 在桌面环境运行 SQLite（内存库，不落盘）。
+// 使用 sqflite_common_ffi 在桌面环境运行 SQLite（内存库，不落盘；
+// 迁移测试例外——内存库关闭即丢，升级路径要用临时文件库验证）。
+
+import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
@@ -218,5 +221,96 @@ void main() {
 
     final pending = await db.getUnuploadedTracks();
     expect(pending.map((t) => t.id).toList(), ['t1', 't2']);
+  });
+
+  test('轨迹名称可持久化：写入读取往返，未命名轨迹读出 null', () async {
+    final db = TrackDatabase.instance;
+    await db.insertTrack(
+      Track(
+        id: 't1',
+        userId: 'admin',
+        startTime: DateTime(2026, 10, 4, 8, 30),
+        name: '客户拜访行程',
+      ),
+    );
+    await db.insertTrack(
+      Track(id: 't2', userId: 'admin', startTime: DateTime(2026, 10, 4, 9)),
+    );
+
+    expect((await db.getTrack('t1'))!.name, '客户拜访行程');
+    // 旧轨迹（无名称）读出 null，展示层自行显示「未命名」
+    expect((await db.getTrack('t2'))!.name, isNull);
+  });
+
+  test('v2 库升级到 v3：旧数据保留且新增 name 列可写', () async {
+    // 迁移要用真实文件库——内存库关闭后内容即丢，测不了升级路径
+    final dir = await Directory.systemTemp.createTemp('work_track_migrate');
+    final dbPath = '${dir.path}/work_track.db';
+    try {
+      // 1. 手工建一个 v2 结构的库（与 v2 版 _onCreate 一致），写入一条旧数据
+      final raw = await databaseFactoryFfi.openDatabase(
+        dbPath,
+        options: OpenDatabaseOptions(
+          version: 2,
+          onCreate: (db, version) async {
+            await db.execute('''
+              CREATE TABLE track (
+                id TEXT PRIMARY KEY,
+                user_id TEXT NOT NULL,
+                start_time TEXT NOT NULL,
+                end_time TEXT,
+                status TEXT NOT NULL DEFAULT 'ongoing',
+                distance REAL,
+                upload_status INTEGER NOT NULL DEFAULT 0
+              )
+            ''');
+            await db.execute('''
+              CREATE TABLE track_point (
+                id TEXT PRIMARY KEY,
+                track_id TEXT NOT NULL,
+                latitude REAL NOT NULL,
+                longitude REAL NOT NULL,
+                record_time TEXT NOT NULL
+              )
+            ''');
+          },
+        ),
+      );
+      await raw.insert('track', {
+        'id': 'old-1',
+        'user_id': 'admin',
+        'start_time': '2026-08-01T09:00:00.000',
+        'status': 'finished',
+        'upload_status': 1,
+      });
+      await raw.close();
+
+      // 2. 用 TrackDatabase（当前 v3）打开同一路径，触发 onUpgrade
+      TrackDatabase.instance.pathOverride = dbPath;
+      await TrackDatabase.instance.close();
+
+      final old = await TrackDatabase.instance.getTrack('old-1');
+      expect(old, isNotNull);
+      expect(old!.name, isNull); // 旧数据无名称，读出 null
+
+      // 3. 迁移后的新列可正常写入
+      await TrackDatabase.instance.insertTrack(
+        Track(
+          id: 'new-1',
+          userId: 'admin',
+          startTime: DateTime(2026, 10, 4, 8),
+          name: '迁移后新记录',
+        ),
+      );
+      expect(
+        (await TrackDatabase.instance.getTrack('new-1'))!.name,
+        '迁移后新记录',
+      );
+    } finally {
+      await TrackDatabase.instance.close();
+      // 恢复内存库路径，避免影响其他测试
+      TrackDatabase.instance.pathOverride = inMemoryDatabasePath;
+      await dir.delete(recursive: true);
+    }
   });
 }

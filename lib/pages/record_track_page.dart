@@ -51,6 +51,12 @@ class _RecordTrackPageState extends State<RecordTrackPage> {
   /// 已采集的轨迹点（记录中的点，trackId 暂为空串）
   final List<TrackPoint> _points = [];
 
+  /// 轨迹名称输入框（开始记录前填写）
+  final TextEditingController _nameController = TextEditingController();
+
+  /// 本次记录的轨迹名称（开始时锁定，结束时随轨迹保存并上传）
+  String? _trackName;
+
   /// 位置流订阅（替代 Timer 轮询，熄屏时由前台服务保持运行）
   StreamSubscription<Position>? _positionSub;
 
@@ -66,6 +72,7 @@ class _RecordTrackPageState extends State<RecordTrackPage> {
   @override
   void dispose() {
     _positionSub?.cancel();
+    _nameController.dispose();
     super.dispose();
   }
 
@@ -109,10 +116,17 @@ class _RecordTrackPageState extends State<RecordTrackPage> {
       ..showSnackBar(SnackBar(content: Text(message)));
   }
 
-  /// 开始记录：订阅位置流，按采集间隔持续采点
+  /// 开始记录：校验名称 → 订阅位置流，按采集间隔持续采点
   void _startRecording() {
+    // 名称在开始时填入并锁定，结束上传时随轨迹一并入库
+    final name = _nameController.text.trim();
+    if (name.isEmpty) {
+      _showSnack('请先填写本次轨迹名称');
+      return;
+    }
     setState(() {
       _recording = true;
+      _trackName = name;
       _startTime = DateTime.now();
       _lastSampleTime = _startTime;
       _points.clear();
@@ -265,6 +279,7 @@ class _RecordTrackPageState extends State<RecordTrackPage> {
     final track = Track(
       id: trackId,
       userId: widget.username,
+      name: _trackName,
       startTime: _startTime ?? endTime,
       endTime: endTime,
       status: 'finished',
@@ -282,7 +297,7 @@ class _RecordTrackPageState extends State<RecordTrackPage> {
     TrackUploadService.instance.uploadTrack(track).catchError((_) {});
 
     if (!mounted) return;
-    _showSnack('轨迹已保存，共采集 ${points.length} 个点');
+    _showSnack('「$_trackName」已保存，共采集 ${points.length} 个点');
     Navigator.of(context).pop(true);
   }
 
@@ -355,6 +370,24 @@ class _RecordTrackPageState extends State<RecordTrackPage> {
                   style: const TextStyle(fontSize: 15, color: Colors.black54),
                 ),
                 const SizedBox(height: 40),
+                // 未开始记录时先填名称（开始后收起，名称随本次记录锁定）
+                if (!_recording) ...[
+                  SizedBox(
+                    width: 240,
+                    child: TextField(
+                      controller: _nameController,
+                      maxLength: 100,
+                      textInputAction: TextInputAction.done,
+                      decoration: const InputDecoration(
+                        labelText: '轨迹名称',
+                        hintText: '如：客户拜访行程',
+                        border: OutlineInputBorder(),
+                        isDense: true,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
                 // 开始/结束按钮
                 SizedBox(
                   width: 240,

@@ -156,12 +156,15 @@ class _MyTracksPageState extends State<MyTracksPage> {
               children: [
                 Expanded(
                   child: Text(
-                    '开始于 ${_formatTime(track.startTime)}',
+                    // 名称是轨迹的主标识；v3 前记录的旧轨迹没有名称
+                    track.name?.isNotEmpty == true ? track.name! : '未命名轨迹',
                     style: const TextStyle(
                       color: Colors.black,
                       fontSize: 15,
-                      fontWeight: FontWeight.w500,
+                      fontWeight: FontWeight.w600,
                     ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
                 _buildUploadBadge(track),
@@ -169,7 +172,7 @@ class _MyTracksPageState extends State<MyTracksPage> {
             ),
             const SizedBox(height: 4),
             Text(
-              '时长 ${_formatDuration(track)} · ${_pointCounts[track.id] ?? 0} 个坐标点',
+              '开始于 ${_formatTime(track.startTime)} · 时长 ${_formatDuration(track)} · ${_pointCounts[track.id] ?? 0} 个坐标点',
               style: const TextStyle(color: Colors.black54, fontSize: 13),
             ),
             if (track.uploadStatus == 2) ...[

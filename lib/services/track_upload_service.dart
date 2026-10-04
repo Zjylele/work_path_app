@@ -46,6 +46,8 @@ class TrackUploadService {
     final points = await TrackDatabase.instance.getTrackPoints(track.id);
     final payload = <String, dynamic>{
       'clientTrackId': track.id,
+      // 名称随轨迹上传入库；旧轨迹（v3 前记录）为 null，后端按空名称接受
+      'name': track.name,
       'startTime': _formatDateTime(track.startTime),
       'endTime': _formatDateTime(track.endTime ?? track.startTime),
       // 后端状态语义：1=进行中 2=已完成

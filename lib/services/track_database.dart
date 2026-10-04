@@ -7,7 +7,7 @@ import '../models/track_point.dart';
 /// 轨迹数据库服务（sqflite）
 ///
 /// 包含两张表：
-/// - track：轨迹主表（id、user_id、start_time、end_time、status、distance）
+/// - track：轨迹主表（id、user_id、name、start_time、end_time、status、distance）
 /// - track_point：轨迹点表（id、track_id、latitude、longitude、record_time）
 ///
 /// 单例使用：[TrackDatabase.instance]
@@ -37,7 +37,7 @@ class TrackDatabase {
     _db = await factory.openDatabase(
       dbPath,
       options: OpenDatabaseOptions(
-        version: 2,
+        version: 3,
         onConfigure: (db) async {
           // 开启外键约束，支持级联删除
           await db.execute('PRAGMA foreign_keys = ON');
@@ -49,12 +49,16 @@ class TrackDatabase {
     return _db!;
   }
 
-  /// 数据库升级：v1 → v2 新增 upload_status 列（轨迹上传状态）
+  /// 数据库升级：v1 → v2 新增 upload_status 列（轨迹上传状态）；
+  /// v2 → v3 新增 name 列（轨迹名称，可空，旧轨迹展示为「未命名」）
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
     if (oldVersion < 2) {
       await db.execute(
         "ALTER TABLE track ADD COLUMN upload_status INTEGER NOT NULL DEFAULT 0",
       );
+    }
+    if (oldVersion < 3) {
+      await db.execute('ALTER TABLE track ADD COLUMN name TEXT');
     }
   }
 
@@ -63,6 +67,7 @@ class TrackDatabase {
       CREATE TABLE track (
         id TEXT PRIMARY KEY,
         user_id TEXT NOT NULL,
+        name TEXT,
         start_time TEXT NOT NULL,
         end_time TEXT,
         status TEXT NOT NULL DEFAULT 'ongoing',

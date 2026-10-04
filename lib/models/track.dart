@@ -4,6 +4,7 @@ class Track {
     required this.id,
     required this.userId,
     required this.startTime,
+    this.name,
     this.endTime,
     this.status = 'ongoing',
     this.distance,
@@ -15,6 +16,9 @@ class Track {
 
   /// 所属员工账号/手机号
   final String userId;
+
+  /// 轨迹名称（开始记录时填写；旧数据为 null，展示层统一显示「未命名」）
+  final String? name;
 
   /// 开始时间
   final DateTime startTime;
@@ -38,6 +42,7 @@ class Track {
     return {
       'id': id,
       'user_id': userId,
+      'name': name,
       'start_time': startTime.toIso8601String(),
       'end_time': endTime?.toIso8601String(),
       'status': status,
@@ -50,6 +55,7 @@ class Track {
     return Track(
       id: map['id'] as String,
       userId: map['user_id'] as String,
+      name: map['name'] as String?,
       startTime: DateTime.parse(map['start_time'] as String),
       endTime: map['end_time'] == null
           ? null
@@ -63,6 +69,7 @@ class Track {
   Track copyWith({
     String? id,
     String? userId,
+    String? name,
     DateTime? startTime,
     DateTime? endTime,
     String? status,
@@ -73,6 +80,7 @@ class Track {
     return Track(
       id: id ?? this.id,
       userId: userId ?? this.userId,
+      name: name ?? this.name,
       startTime: startTime ?? this.startTime,
       endTime: clearEndTime ? null : (endTime ?? this.endTime),
       status: status ?? this.status,

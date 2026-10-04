@@ -215,6 +215,15 @@ class _TrackDetailPageState extends State<TrackDetailPage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
+            '名称：${track.name?.isNotEmpty == true ? track.name! : '未命名'}',
+            style: const TextStyle(
+              color: Colors.black,
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
             '开始：${_formatTime(track.startTime)}',
             style: const TextStyle(color: Colors.black, fontSize: 15),
           ),
