@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../models/track.dart';
+import '../services/api_client.dart';
+import '../services/auth_service.dart';
 import '../services/track_database.dart';
 import '../services/track_upload_service.dart';
 import 'track_detail_page.dart';
@@ -21,6 +23,12 @@ class _MyTracksPageState extends State<MyTracksPage> {
 
   /// trackId -> 坐标点数
   final Map<String, int> _pointCounts = {};
+
+  /// 本地轨迹 UUID -> 服务端分析状态（0/1/2/3）
+  ///
+  /// 分析状态只存在于服务端，本地 sqflite 存不了；两边靠 clientTrackId 对上
+  /// ——它正是上传时的幂等键。
+  Map<String, int> _analysisStatus = {};
 
   /// 是否正在补传
   bool _uploading = false;
@@ -46,6 +54,31 @@ class _MyTracksPageState extends State<MyTracksPage> {
           ..clear()
           ..addAll(counts);
       });
+    }
+    await _loadAnalysisStatus();
+  }
+
+  /// 拉服务端轨迹列表，按 clientTrackId 建立「本地轨迹 → 分析状态」映射。
+  ///
+  /// 拉不到就保持空映射（列表照常显示，只是没有分析状态）——
+  /// 这是一个增强信息，不该因为它让整页报错，也不该阻塞本地轨迹与补传。
+  Future<void> _loadAnalysisStatus() async {
+    if (!await AuthService.instance.isLoggedIn()) return;
+    try {
+      final data = await ApiClient.instance.fetchMyTracks();
+      final list = (data['list'] as List?) ?? const [];
+      final map = <String, int>{};
+      for (final item in list) {
+        if (item is! Map) continue;
+        final cid = item['clientTrackId'] as String?;
+        final status = item['analysisStatus'] as num?;
+        if (cid != null && cid.isNotEmpty && status != null) {
+          map[cid] = status.toInt();
+        }
+      }
+      if (mounted) setState(() => _analysisStatus = map);
+    } catch (_) {
+      // 静默降级
     }
   }
 
@@ -175,6 +208,10 @@ class _MyTracksPageState extends State<MyTracksPage> {
               '开始于 ${_formatTime(track.startTime)} · 时长 ${_formatDuration(track)} · ${_pointCounts[track.id] ?? 0} 个坐标点',
               style: const TextStyle(color: Colors.black54, fontSize: 13),
             ),
+            if (_analysisStatus[track.id] != null) ...[
+              const SizedBox(height: 6),
+              _buildAnalysisBadge(_analysisStatus[track.id]!),
+            ],
             if (track.uploadStatus == 2) ...[
               const SizedBox(height: 4),
               Align(
@@ -189,6 +226,27 @@ class _MyTracksPageState extends State<MyTracksPage> {
           ],
         ),
       ),
+    );
+  }
+
+  /// 分析状态角标：未分析(灰) / 分析中(蓝) / 已分析(绿) / 分析失败(红)
+  ///
+  /// 与上传状态是两个维度：上传成功不等于分析完成，分开显示才能让
+  /// 「传给谁了」和「AI 看没看」各自可辨。
+  Widget _buildAnalysisBadge(int status) {
+    final (text, color) = switch (status) {
+      0 => ('未分析', Colors.grey),
+      1 => ('分析中', const Color(0xFF1565C0)),
+      2 => ('已分析', const Color(0xFF2E7D32)),
+      3 => ('分析失败', const Color(0xFFE53935)),
+      _ => ('未知', Colors.grey),
+    };
+    return Row(
+      children: [
+        Icon(Icons.auto_awesome, size: 14, color: color),
+        const SizedBox(width: 4),
+        Text('AI $text', style: TextStyle(color: color, fontSize: 12)),
+      ],
     );
   }
 

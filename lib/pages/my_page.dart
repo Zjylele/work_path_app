@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import 'home_page.dart';
 import 'login_page.dart';
+import 'my_orders_page.dart';
 import 'my_tracks_page.dart';
 import 'profile_page.dart';
 import 'settings_page.dart';
@@ -108,6 +109,12 @@ class MyPage extends StatelessWidget {
               MaterialPageRoute<void>(
                 builder: (_) => MyTracksPage(username: username),
               ),
+            );
+          }),
+          _buildDivider(),
+          _buildMenuItem('我的工单', onTap: () {
+            Navigator.of(context).push(
+              MaterialPageRoute<void>(builder: (_) => const MyOrdersPage()),
             );
           }),
           _buildDivider(),

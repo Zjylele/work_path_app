@@ -176,4 +176,53 @@ class ApiClient implements AuthApi {
       return (resp.data?['data'] as Map<String, dynamic>?) ?? const {};
     });
   }
+
+  /// GET /api/track/list，返回 data（{ list, total, page, pageSize }）
+  ///
+  /// 列表读的是服务端轨迹，带 analysisStatus。手机端本地列表靠
+  /// clientTrackId 与它对应——分析状态只存在于服务端，本地存不了。
+  Future<Map<String, dynamic>> fetchMyTracks({
+    int page = 1,
+    int pageSize = 100,
+  }) {
+    return _unwrap(() async {
+      final resp = await _dio.get<Map<String, dynamic>>(
+        '/api/track/list',
+        queryParameters: {'page': page, 'pageSize': pageSize},
+      );
+      return (resp.data?['data'] as Map<String, dynamic>?) ?? const {};
+    });
+  }
+
+  /// GET /api/orders，返回当前登录员工的整改工单列表
+  Future<List<Map<String, dynamic>>> fetchMyOrders() {
+    return _unwrap(() async {
+      final resp = await _dio.get<Map<String, dynamic>>('/api/orders');
+      final data = resp.data?['data'];
+      if (data is List) {
+        return data.cast<Map<String, dynamic>>();
+      }
+      return const [];
+    });
+  }
+
+  /// POST /api/orders/{id}/handle，提交处理说明（待处理 → 处理中）
+  Future<void> handleOrder(int orderId, String handleNote) {
+    return _unwrap(() async {
+      await _dio.post<Map<String, dynamic>>(
+        '/api/orders/$orderId/handle',
+        data: {'handleNote': handleNote},
+      );
+    });
+  }
+
+  /// POST /api/orders/{id}/appeal，提交申诉（待处理 → 申诉中）
+  Future<void> appealOrder(int orderId, String appealReason) {
+    return _unwrap(() async {
+      await _dio.post<Map<String, dynamic>>(
+        '/api/orders/$orderId/appeal',
+        data: {'appealReason': appealReason},
+      );
+    });
+  }
 }
