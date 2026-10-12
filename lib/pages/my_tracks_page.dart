@@ -30,6 +30,12 @@ class _MyTracksPageState extends State<MyTracksPage> {
   /// ——它正是上传时的幂等键。
   Map<String, int> _analysisStatus = {};
 
+  /// 本地轨迹 UUID -> 服务端轨迹 id
+  ///
+  /// 详情页要按服务端 id 拉语义标注结果，而本地只存 UUID（上传时当
+  /// clientTrackId 用），所以在这里顺手把对应关系建起来。
+  final Map<String, int> _serverTrackIds = {};
+
   /// 是否正在补传
   bool _uploading = false;
 
@@ -40,12 +46,13 @@ class _MyTracksPageState extends State<MyTracksPage> {
   }
 
   Future<void> _loadTracks() async {
-    final tracks = await TrackDatabase.instance
-        .getTracks(userId: widget.username);
+    final tracks = await TrackDatabase.instance.getTracks(
+      userId: widget.username,
+    );
     final counts = <String, int>{};
     for (final track in tracks) {
-      counts[track.id] =
-          (await TrackDatabase.instance.getTrackPoints(track.id)).length;
+      counts[track.id] = (await TrackDatabase.instance.getTrackPoints(track.id))
+          .length;
     }
     if (mounted) {
       setState(() {
@@ -58,25 +65,38 @@ class _MyTracksPageState extends State<MyTracksPage> {
     await _loadAnalysisStatus();
   }
 
-  /// 拉服务端轨迹列表，按 clientTrackId 建立「本地轨迹 → 分析状态」映射。
+  /// 拉服务端轨迹列表，按 clientTrackId 建立「本地轨迹 → 分析状态 / 服务端 id」映射。
   ///
-  /// 拉不到就保持空映射（列表照常显示，只是没有分析状态）——
-  /// 这是一个增强信息，不该因为它让整页报错，也不该阻塞本地轨迹与补传。
+  /// 拉不到就保持空映射（列表照常显示，只是没有分析状态、进详情也取不到语义标注）——
+  /// 这是增强信息，不该因为它让整页报错，也不该阻塞本地轨迹与补传。
   Future<void> _loadAnalysisStatus() async {
     if (!await AuthService.instance.isLoggedIn()) return;
     try {
       final data = await ApiClient.instance.fetchMyTracks();
       final list = (data['list'] as List?) ?? const [];
-      final map = <String, int>{};
+      final statuses = <String, int>{};
+      final serverIds = <String, int>{};
       for (final item in list) {
         if (item is! Map) continue;
         final cid = item['clientTrackId'] as String?;
+        if (cid == null || cid.isEmpty) continue;
         final status = item['analysisStatus'] as num?;
-        if (cid != null && cid.isNotEmpty && status != null) {
-          map[cid] = status.toInt();
+        if (status != null) {
+          statuses[cid] = status.toInt();
+        }
+        final serverId = item['id'] as num?;
+        if (serverId != null) {
+          serverIds[cid] = serverId.toInt();
         }
       }
-      if (mounted) setState(() => _analysisStatus = map);
+      if (mounted) {
+        setState(() {
+          _analysisStatus = statuses;
+          _serverTrackIds
+            ..clear()
+            ..addAll(serverIds);
+        });
+      }
     } catch (_) {
       // 静默降级
     }
@@ -171,7 +191,10 @@ class _MyTracksPageState extends State<MyTracksPage> {
       onTap: () {
         Navigator.of(context).push(
           MaterialPageRoute<void>(
-            builder: (_) => TrackDetailPage(track: track),
+            builder: (_) => TrackDetailPage(
+              track: track,
+              serverTrackId: _serverTrackIds[track.id],
+            ),
           ),
         );
       },

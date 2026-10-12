@@ -8,14 +8,21 @@ import 'package:flutter/material.dart';
 import '../config/api_config.dart';
 import '../models/track.dart';
 import '../models/track_point.dart';
+import '../models/work_event.dart';
+import '../services/api_client.dart';
+import '../services/auth_service.dart';
 import '../services/track_database.dart';
 import '../utils/geo_convert.dart';
 
-/// 轨迹详情页：高德地图渲染轨迹路径 + 起终点实心圆 + 坐标点列表
+/// 轨迹详情页：高德地图渲染轨迹路径 + 起终点实心圆 + 语义标注 + 坐标点列表
 class TrackDetailPage extends StatefulWidget {
-  const TrackDetailPage({super.key, required this.track});
+  const TrackDetailPage({super.key, required this.track, this.serverTrackId});
 
   final Track track;
+
+  /// 服务端轨迹 id。本地只存 UUID，语义标注要从服务端按 id 取；
+  /// 拿不到时（还没上传成功、或列表没拉到）为 null，此时不显示语义标注。
+  final int? serverTrackId;
 
   @override
   State<TrackDetailPage> createState() => _TrackDetailPageState();
@@ -36,15 +43,21 @@ class _TrackDetailPageState extends State<TrackDetailPage> {
   /// 是否已加载完成（至少有一个点才显示地图）
   bool _mapReady = false;
 
+  /// 该轨迹的语义标注结果（服务端返回的停留事件）
+  List<WorkEvent> _events = [];
+
+  /// 语义标注是否已成功拉到；只有拉到了才谈得上「没有结果」的提示
+  bool _eventsLoaded = false;
+
   @override
   void initState() {
     super.initState();
     _loadPoints();
+    _loadEvents();
   }
 
   Future<void> _loadPoints() async {
-    final points =
-        await TrackDatabase.instance.getTrackPoints(widget.track.id);
+    final points = await TrackDatabase.instance.getTrackPoints(widget.track.id);
 
     if (points.isEmpty) {
       if (mounted) setState(() {});
@@ -58,10 +71,12 @@ class _TrackDetailPageState extends State<TrackDetailPage> {
     }).toList();
 
     // 生成起终点实心圆图标
-    final startIcon =
-        BitmapDescriptor.fromBytes(await _createCircleIcon(Colors.green));
-    final endIcon =
-        BitmapDescriptor.fromBytes(await _createCircleIcon(Colors.red));
+    final startIcon = BitmapDescriptor.fromBytes(
+      await _createCircleIcon(Colors.green),
+    );
+    final endIcon = BitmapDescriptor.fromBytes(
+      await _createCircleIcon(Colors.red),
+    );
 
     if (!mounted) return;
     setState(() {
@@ -94,6 +109,32 @@ class _TrackDetailPageState extends State<TrackDetailPage> {
     });
   }
 
+  /// 拉这条轨迹的语义标注结果（员工侧接口）。
+  ///
+  /// 属于增强信息：没登录、没上传成功、网络不通，都只是不显示，
+  /// 不阻塞地图与坐标点——详情页的主职责仍然是看轨迹。
+  Future<void> _loadEvents() async {
+    final trackId = widget.serverTrackId;
+    if (trackId == null) return;
+    if (!await AuthService.instance.isLoggedIn()) return;
+    try {
+      final rows = await ApiClient.instance.fetchTrackEvents(trackId);
+      final events = rows
+          .map(WorkEvent.fromJson)
+          // 语义标注是给停留点打的；移动事件没有标签，不进这一屏
+          .where((e) => e.isStay || (e.semanticLabel?.isNotEmpty ?? false))
+          .toList();
+      if (mounted) {
+        setState(() {
+          _events = events;
+          _eventsLoaded = true;
+        });
+      }
+    } catch (_) {
+      // 静默降级：取不到语义标注时，地图与坐标点照常可用
+    }
+  }
+
   /// 用 dart:ui 画一个实心圆 PNG，作为 Marker 图标
   Future<Uint8List> _createCircleIcon(Color color) async {
     const size = 28.0;
@@ -104,7 +145,10 @@ class _TrackDetailPageState extends State<TrackDetailPage> {
       size / 2,
       Paint()..color = color,
     );
-    final image = await recorder.endRecording().toImage(size.toInt(), size.toInt());
+    final image = await recorder.endRecording().toImage(
+      size.toInt(),
+      size.toInt(),
+    );
     final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
     return byteData!.buffer.asUint8List();
   }
@@ -129,6 +173,10 @@ class _TrackDetailPageState extends State<TrackDetailPage> {
             const SizedBox(height: 16),
             // 轨迹信息卡片
             _buildTrackInfoCard(),
+            if (_events.isNotEmpty || _eventsLoaded) ...[
+              const SizedBox(height: 16),
+              _buildEventsCard(),
+            ],
             const SizedBox(height: 16),
             // 坐标点列表
             Expanded(
@@ -178,10 +226,7 @@ class _TrackDetailPageState extends State<TrackDetailPage> {
         hasShow: true,
         hasAgree: true,
       ),
-      initialCameraPosition: CameraPosition(
-        target: _latLngs.first,
-        zoom: 16,
-      ),
+      initialCameraPosition: CameraPosition(target: _latLngs.first, zoom: 16),
       markers: _markers,
       polylines: _polylines,
     );
@@ -239,6 +284,131 @@ class _TrackDetailPageState extends State<TrackDetailPage> {
           ),
         ],
       ),
+    );
+  }
+
+  /// 语义标注卡片：这条轨迹的停留点与 AI 标签
+  Widget _buildEventsCard() {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.symmetric(horizontal: 24),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border.all(color: Colors.black, width: 1),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(
+                Icons.auto_awesome,
+                size: 16,
+                color: Color(0xFF73ACF6),
+              ),
+              const SizedBox(width: 6),
+              const Text(
+                'AI 语义标注',
+                style: TextStyle(
+                  color: Colors.black,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          if (_events.isEmpty)
+            const Text(
+              '该轨迹暂无语义标注结果（可能还在分析中）',
+              style: TextStyle(color: Colors.grey, fontSize: 13),
+            )
+          else
+            // 事件条数不多，但每条含理由，给个上限内部滚动，
+            // 免得把下面的坐标点列表挤到看不见
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxHeight: 168),
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    for (var i = 0; i < _events.length; i++) ...[
+                      if (i > 0) const Divider(height: 20),
+                      _buildEventRow(_events[i]),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  /// 单条停留事件：语义标签 + 置信度，下面补时间、停留时长与地点
+  Widget _buildEventRow(WorkEvent event) {
+    final meta = <String>[
+      if (event.startTime != null)
+        '${_formatClock(event.startTime!)}'
+            '${event.endTime == null ? '' : ' - ${_formatClock(event.endTime!)}'}',
+      if (event.dwellText != null) '停留 ${event.dwellText}',
+      if (event.poiName?.isNotEmpty == true) event.poiName!,
+    ];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                event.labelText,
+                style: const TextStyle(
+                  color: Colors.black,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            if (event.confidenceText != null)
+              Text(
+                '置信度 ${event.confidenceText}',
+                style: const TextStyle(color: Colors.black54, fontSize: 12),
+              ),
+          ],
+        ),
+        if (meta.isNotEmpty) ...[
+          const SizedBox(height: 4),
+          Text(
+            meta.join(' · '),
+            style: const TextStyle(color: Colors.black54, fontSize: 13),
+          ),
+        ],
+        const SizedBox(height: 4),
+        Text(
+          event.confirmText,
+          style: TextStyle(
+            fontSize: 12,
+            color: switch (event.confirmStatus) {
+              1 => const Color(0xFF2E7D32),
+              2 => const Color(0xFFE53935),
+              _ => Colors.grey,
+            },
+          ),
+        ),
+        if (event.aiReason?.isNotEmpty == true) ...[
+          const SizedBox(height: 4),
+          Text(
+            'AI 理由：${event.aiReason}',
+            style: const TextStyle(color: Colors.grey, fontSize: 12),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ],
     );
   }
 

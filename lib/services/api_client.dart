@@ -59,7 +59,9 @@ class ApiClient implements AuthApi {
             if (code != null && code != 200) {
               // token 失效（401）且请求带 token（非登录接口）→ 触发全局登出回调
               if (code == 401 &&
-                  response.requestOptions.headers.containsKey('Authorization')) {
+                  response.requestOptions.headers.containsKey(
+                    'Authorization',
+                  )) {
                 onUnauthorized?.call();
               }
               handler.reject(
@@ -133,7 +135,11 @@ class ApiClient implements AuthApi {
     return _unwrap(() async {
       await _dio.post<Map<String, dynamic>>(
         '/api/user/register',
-        data: {'username': username, 'password': password, 'nickname': nickname},
+        data: {
+          'username': username,
+          'password': password,
+          'nickname': nickname,
+        },
       );
     });
   }
@@ -191,6 +197,23 @@ class ApiClient implements AuthApi {
         queryParameters: {'page': page, 'pageSize': pageSize},
       );
       return (resp.data?['data'] as Map<String, dynamic>?) ?? const {};
+    });
+  }
+
+  /// GET /api/track/{id}/events，返回该轨迹的语义标注结果（员工侧）
+  ///
+  /// 这里的 id 是服务端轨迹 id，不是本地 clientTrackId；两者靠轨迹列表
+  /// 返回的 id / clientTrackId 对应。轨迹不属于当前登录用户时后端返回 403。
+  Future<List<Map<String, dynamic>>> fetchTrackEvents(int trackId) {
+    return _unwrap(() async {
+      final resp = await _dio.get<Map<String, dynamic>>(
+        '/api/track/$trackId/events',
+      );
+      final data = resp.data?['data'];
+      if (data is List) {
+        return data.cast<Map<String, dynamic>>();
+      }
+      return const [];
     });
   }
 
