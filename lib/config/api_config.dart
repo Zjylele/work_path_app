@@ -11,7 +11,7 @@ class ApiConfig {
   static const String _envBaseUrl = String.fromEnvironment('API_BASE_URL');
 
   /// 手动覆盖后端地址（真机调试临时用，改完记得改回空串 ''）
-  static const String overrideBaseUrl = 'http://8.210.87.189';
+  static const String overrideBaseUrl = 'https://workpath.top';
 
   /// 当前生效的后端 baseUrl（优先级：overrideBaseUrl > API_BASE_URL > 平台默认）
   static String get baseUrl {

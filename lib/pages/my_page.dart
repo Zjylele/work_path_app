@@ -18,7 +18,7 @@ class MyPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5),
+      backgroundColor: const Color(0xFFF7F8FA),
       body: SafeArea(
         child: Column(
           children: [
@@ -96,33 +96,45 @@ class MyPage extends StatelessWidget {
       ),
       child: Column(
         children: [
-          _buildMenuItem('个人信息', onTap: () {
-            Navigator.of(context).push(
-              MaterialPageRoute<void>(
-                builder: (_) => ProfilePage(username: username),
-              ),
-            );
-          }),
+          _buildMenuItem(
+            '个人信息',
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => ProfilePage(username: username),
+                ),
+              );
+            },
+          ),
           _buildDivider(),
-          _buildMenuItem('全部轨迹', onTap: () {
-            Navigator.of(context).push(
-              MaterialPageRoute<void>(
-                builder: (_) => MyTracksPage(username: username),
-              ),
-            );
-          }),
+          _buildMenuItem(
+            '全部轨迹',
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => MyTracksPage(username: username),
+                ),
+              );
+            },
+          ),
           _buildDivider(),
-          _buildMenuItem('我的工单', onTap: () {
-            Navigator.of(context).push(
-              MaterialPageRoute<void>(builder: (_) => const MyOrdersPage()),
-            );
-          }),
+          _buildMenuItem(
+            '我的工单',
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute<void>(builder: (_) => const MyOrdersPage()),
+              );
+            },
+          ),
           _buildDivider(),
-          _buildMenuItem('设置', onTap: () {
-            Navigator.of(context).push(
-              MaterialPageRoute<void>(builder: (_) => const SettingsPage()),
-            );
-          }),
+          _buildMenuItem(
+            '设置',
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute<void>(builder: (_) => const SettingsPage()),
+              );
+            },
+          ),
         ],
       ),
     );
@@ -188,7 +200,7 @@ class MyPage extends StatelessWidget {
       height: 56,
       decoration: const BoxDecoration(
         color: Colors.white,
-        border: Border(top: BorderSide(color: Colors.black, width: 1)),
+        border: Border(top: BorderSide(color: Color(0xFFE8EAED), width: 1)),
       ),
       child: Row(
         children: [

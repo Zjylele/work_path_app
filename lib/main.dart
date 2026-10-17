@@ -37,8 +37,26 @@ class MyApp extends StatelessWidget {
       navigatorKey: appNavigatorKey,
       theme: ThemeData(
         useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF73ACF6)),
-        scaffoldBackgroundColor: const Color(0xFFF8BBD0),
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF4B5969),
+          brightness: Brightness.light,
+          surface: Colors.white,
+          primary: const Color(0xFF4B5969),
+        ),
+        scaffoldBackgroundColor: const Color(0xFFF7F8FA),
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Colors.white,
+          foregroundColor: Color(0xFF28333E),
+          surfaceTintColor: Colors.transparent,
+          elevation: 0,
+        ),
+        filledButtonTheme: FilledButtonThemeData(
+          style: FilledButton.styleFrom(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+        ),
       ),
       home: const _StartupGate(),
     );
@@ -94,16 +112,14 @@ class _StartupGateState extends State<_StartupGate> {
   @override
   Widget build(BuildContext context) {
     if (!_checked) {
-      // 加载中：粉色背景 + loading，保证启动时有 UI
+      // 加载中：浅灰背景 + loading，保证启动时有 UI
       return const Scaffold(
-        backgroundColor: Color(0xFFF8BBD0),
+        backgroundColor: Color(0xFFF7F8FA),
         body: Center(
-          child: CircularProgressIndicator(color: Color(0xFF73ACF6)),
+          child: CircularProgressIndicator(color: Color(0xFF4B5969)),
         ),
       );
     }
-    return _loggedIn
-        ? HomePage(username: _username)
-        : const LoginPage();
+    return _loggedIn ? HomePage(username: _username) : const LoginPage();
   }
 }

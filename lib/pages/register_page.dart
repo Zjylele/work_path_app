@@ -78,13 +78,13 @@ class _RegisterPageState extends State<RegisterPage> {
       body: Stack(
         fit: StackFit.expand,
         children: [
-          // 背景渐变（蓝 → 粉，与登录页一致）
+          // 背景渐变（白 → 浅灰，与登录页一致）
           const DecoratedBox(
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
-                colors: [Color(0xFF73ACF6), Color(0xFFF8BBD0)],
+                colors: [Color(0xFFFFFFFF), Color(0xFFF7F8FA)],
               ),
             ),
           ),
@@ -105,42 +105,53 @@ class _RegisterPageState extends State<RegisterPage> {
                       ),
                     ),
                     const SizedBox(height: 40),
-                    SizedBox(width: _fieldWidth, child: _buildField(
-                      controller: _usernameController,
-                      hint: '用户名',
-                      icon: Icons.person_outline,
-                    )),
-                    const SizedBox(height: 16),
-                    SizedBox(width: _fieldWidth, child: _buildField(
-                      controller: _passwordController,
-                      hint: '密码（至少 6 位）',
-                      icon: Icons.lock_outline,
-                      obscure: _obscurePassword,
-                      suffix: IconButton(
-                        icon: Icon(
-                          _obscurePassword
-                              ? Icons.visibility_off
-                              : Icons.visibility,
-                          color: Colors.black54,
-                        ),
-                        onPressed: () {
-                          setState(() => _obscurePassword = !_obscurePassword);
-                        },
+                    SizedBox(
+                      width: _fieldWidth,
+                      child: _buildField(
+                        controller: _usernameController,
+                        hint: '用户名',
+                        icon: Icons.person_outline,
                       ),
-                    )),
+                    ),
                     const SizedBox(height: 16),
-                    SizedBox(width: _fieldWidth, child: _buildField(
-                      controller: _nicknameController,
-                      hint: '昵称',
-                      icon: Icons.badge_outlined,
-                    )),
+                    SizedBox(
+                      width: _fieldWidth,
+                      child: _buildField(
+                        controller: _passwordController,
+                        hint: '密码（至少 6 位）',
+                        icon: Icons.lock_outline,
+                        obscure: _obscurePassword,
+                        suffix: IconButton(
+                          icon: Icon(
+                            _obscurePassword
+                                ? Icons.visibility_off
+                                : Icons.visibility,
+                            color: Colors.black54,
+                          ),
+                          onPressed: () {
+                            setState(
+                              () => _obscurePassword = !_obscurePassword,
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    SizedBox(
+                      width: _fieldWidth,
+                      child: _buildField(
+                        controller: _nicknameController,
+                        hint: '昵称',
+                        icon: Icons.badge_outlined,
+                      ),
+                    ),
                     const SizedBox(height: 32),
                     SizedBox(
                       width: _fieldWidth,
                       child: FilledButton(
                         onPressed: _loading ? null : _handleRegister,
                         style: FilledButton.styleFrom(
-                          backgroundColor: const Color(0xFF73ACF6),
+                          backgroundColor: const Color(0xFF4B5969),
                           padding: const EdgeInsets.symmetric(vertical: 14),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(24),
@@ -171,7 +182,10 @@ class _RegisterPageState extends State<RegisterPage> {
                           : () => Navigator.of(context).pop(),
                       child: const Text(
                         '已有账号？去登录',
-                        style: TextStyle(color: Color(0xFF73ACF6), fontSize: 15),
+                        style: TextStyle(
+                          color: Color(0xFF4B5969),
+                          fontSize: 15,
+                        ),
                       ),
                     ),
                   ],

@@ -75,10 +75,7 @@ class _LoginPageState extends State<LoginPage> {
       ..hideCurrentSnackBar()
       ..showSnackBar(
         SnackBar(
-          content: Text(
-            message,
-            textAlign: TextAlign.center,
-          ),
+          content: Text(message, textAlign: TextAlign.center),
           duration: const Duration(seconds: 2),
         ),
       );
@@ -90,14 +87,14 @@ class _LoginPageState extends State<LoginPage> {
       body: Stack(
         fit: StackFit.expand,
         children: [
-          // 背景图层：蓝→粉渐变；后续插入背景图时替换此处即可
+          // 背景图层：白→浅灰渐变；后续插入背景图时替换此处即可
           widget.background ??
               const DecoratedBox(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
-                    colors: [Color(0xFF73ACF6), Color(0xFFF8BBD0)],
+                    colors: [Color(0xFFFFFFFF), Color(0xFFF7F8FA)],
                   ),
                 ),
               ),
@@ -209,10 +206,7 @@ class _LoginPageState extends State<LoginPage> {
   Widget _buildLinksRow() {
     return const Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        _LinkText('短信验证码登录'),
-        _LinkText('忘记密码'),
-      ],
+      children: [_LinkText('短信验证码登录'), _LinkText('忘记密码')],
     );
   }
 
@@ -221,11 +215,9 @@ class _LoginPageState extends State<LoginPage> {
     return FilledButton(
       onPressed: _loading ? null : _handleLogin,
       style: FilledButton.styleFrom(
-        backgroundColor: const Color(0xFF73ACF6),
+        backgroundColor: const Color(0xFF4B5969),
         padding: const EdgeInsets.symmetric(vertical: 14),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(24),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       ),
       child: _loading
           ? const SizedBox(
@@ -254,7 +246,7 @@ class _LinkText extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text(
       text,
-      style: const TextStyle(color: Color(0xFF73ACF6), fontSize: 15),
+      style: const TextStyle(color: Color(0xFF4B5969), fontSize: 15),
     );
   }
 }

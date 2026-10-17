@@ -144,10 +144,10 @@ class _MyTracksPageState extends State<MyTracksPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5),
+      backgroundColor: const Color(0xFFF7F8FA),
       appBar: AppBar(
         title: const Text('我的轨迹'),
-        backgroundColor: const Color(0xFFF5F5F5),
+        backgroundColor: const Color(0xFFF7F8FA),
         foregroundColor: Colors.black,
         actions: [
           IconButton(
@@ -202,7 +202,7 @@ class _MyTracksPageState extends State<MyTracksPage> {
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: Colors.white,
-          border: Border.all(color: Colors.black, width: 1),
+          border: Border.all(color: const Color(0xFFE8EAED), width: 1),
           borderRadius: BorderRadius.circular(16),
         ),
         child: Column(

@@ -133,24 +133,24 @@ class _RecordTrackPageState extends State<RecordTrackPage> {
       _lastAddedPos = null;
     });
 
-    _positionSub = Geolocator.getPositionStream(
-      locationSettings: _locationSettings(),
-    ).listen(
-      (pos) {
-        final now = DateTime.now();
-        // 按采集间隔过滤，并过滤掉过期缓存定位 / 原地重复点位
-        if (now.difference(_lastSampleTime!) >= _sampleInterval &&
-            _isUsablePosition(pos)) {
-          _lastSampleTime = now;
-          _lastAddedPos = pos;
-          _addPoint(pos);
-        }
-        if (mounted) setState(() {});
-      },
-      onError: (_) {
-        // 单次定位失败忽略，等待下一条位置更新
-      },
-    );
+    _positionSub =
+        Geolocator.getPositionStream(locationSettings: _locationSettings())
+            .listen(
+              (pos) {
+                final now = DateTime.now();
+                // 按采集间隔过滤，并过滤掉过期缓存定位 / 原地重复点位
+                if (now.difference(_lastSampleTime!) >= _sampleInterval &&
+                    _isUsablePosition(pos)) {
+                  _lastSampleTime = now;
+                  _lastAddedPos = pos;
+                  _addPoint(pos);
+                }
+                if (mounted) setState(() {});
+              },
+              onError: (_) {
+                // 单次定位失败忽略，等待下一条位置更新
+              },
+            );
   }
 
   /// 位置是否可用于采集：
@@ -182,7 +182,8 @@ class _RecordTrackPageState extends State<RecordTrackPage> {
     final p2 = lat2 * pi / 180;
     final dp = (lat2 - lat1) * pi / 180;
     final dl = (lng2 - lng1) * pi / 180;
-    final a = sin(dp / 2) * sin(dp / 2) +
+    final a =
+        sin(dp / 2) * sin(dp / 2) +
         cos(p1) * cos(p2) * sin(dl / 2) * sin(dl / 2);
     return earthRadius * 2 * atan2(sqrt(a), sqrt(1 - a));
   }
@@ -286,9 +287,7 @@ class _RecordTrackPageState extends State<RecordTrackPage> {
     );
 
     // 为每个点补上 trackId
-    final points = _points
-        .map((p) => p.copyWith(trackId: trackId))
-        .toList();
+    final points = _points.map((p) => p.copyWith(trackId: trackId)).toList();
 
     await TrackDatabase.instance.insertTrack(track);
     await TrackDatabase.instance.insertTrackPoints(points);
@@ -322,111 +321,123 @@ class _RecordTrackPageState extends State<RecordTrackPage> {
         _confirmExitWhileRecording();
       },
       child: Scaffold(
-        backgroundColor: const Color(0xFFF5F5F5),
+        backgroundColor: const Color(0xFFF7F8FA),
         appBar: AppBar(
           title: const Text('记录工作轨迹'),
-          backgroundColor: const Color(0xFFF5F5F5),
+          backgroundColor: const Color(0xFFF7F8FA),
           foregroundColor: Colors.black,
         ),
-      body: SafeArea(
-        child: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                // 状态图标
-                Container(
-                  width: 96,
-                  height: 96,
-                  decoration: BoxDecoration(
-                    color: _recording ? const Color(0xFFE8F0FE) : Colors.white,
-                    shape: BoxShape.circle,
-                    border: Border.all(color: const Color(0xFF73ACF6), width: 2),
-                  ),
-                  child: Icon(
-                    _recording ? Icons.gps_fixed : Icons.place_outlined,
-                    size: 44,
-                    color: const Color(0xFF73ACF6),
-                  ),
-                ),
-                const SizedBox(height: 24),
-                // 状态文案
-                Text(
-                  _recording
-                      ? '记录中…'
-                      : (_permissionGranted ? '准备就绪' : '正在检查定位权限…'),
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.black,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  _recording
-                      ? '已记录 ${_formatDuration(duration)} · 采集 ${_points.length} 个点'
-                      : '点击下方按钮开始记录工作轨迹',
-                  style: const TextStyle(fontSize: 15, color: Colors.black54),
-                ),
-                const SizedBox(height: 40),
-                // 未开始记录时先填名称（开始后收起，名称随本次记录锁定）
-                if (!_recording) ...[
-                  SizedBox(
-                    width: 240,
-                    child: TextField(
-                      controller: _nameController,
-                      maxLength: 100,
-                      textInputAction: TextInputAction.done,
-                      decoration: const InputDecoration(
-                        labelText: '轨迹名称',
-                        hintText: '如：客户拜访行程',
-                        border: OutlineInputBorder(),
-                        isDense: true,
+        body: SafeArea(
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  // 状态图标
+                  Container(
+                    width: 96,
+                    height: 96,
+                    decoration: BoxDecoration(
+                      color: _recording
+                          ? const Color(0xFFE8F0FE)
+                          : Colors.white,
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: const Color(0xFF4B5969),
+                        width: 2,
                       ),
                     ),
+                    child: Icon(
+                      _recording ? Icons.gps_fixed : Icons.place_outlined,
+                      size: 44,
+                      color: const Color(0xFF4B5969),
+                    ),
                   ),
-                  const SizedBox(height: 16),
-                ],
-                // 开始/结束按钮
-                SizedBox(
-                  width: 240,
-                  height: 52,
-                  child: _recording
-                      ? FilledButton(
-                          onPressed: _stopRecording,
-                          style: FilledButton.styleFrom(
-                            backgroundColor: const Color(0xFFE53935),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(24),
-                            ),
-                          ),
-                          child: const Text(
-                            '结束并保存',
-                            style: TextStyle(fontSize: 17, color: Colors.white),
-                          ),
-                        )
-                      : FilledButton(
-                          onPressed:
-                              _permissionGranted ? _startRecording : null,
-                          style: FilledButton.styleFrom(
-                            backgroundColor: const Color(0xFF73ACF6),
-                            disabledBackgroundColor: Colors.grey.shade300,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(24),
-                            ),
-                          ),
-                          child: const Text(
-                            '开始记录',
-                            style: TextStyle(fontSize: 17, color: Colors.white),
-                          ),
+                  const SizedBox(height: 24),
+                  // 状态文案
+                  Text(
+                    _recording
+                        ? '记录中…'
+                        : (_permissionGranted ? '准备就绪' : '正在检查定位权限…'),
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.black,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    _recording
+                        ? '已记录 ${_formatDuration(duration)} · 采集 ${_points.length} 个点'
+                        : '点击下方按钮开始记录工作轨迹',
+                    style: const TextStyle(fontSize: 15, color: Colors.black54),
+                  ),
+                  const SizedBox(height: 40),
+                  // 未开始记录时先填名称（开始后收起，名称随本次记录锁定）
+                  if (!_recording) ...[
+                    SizedBox(
+                      width: 240,
+                      child: TextField(
+                        controller: _nameController,
+                        maxLength: 100,
+                        textInputAction: TextInputAction.done,
+                        decoration: const InputDecoration(
+                          labelText: '轨迹名称',
+                          hintText: '如：客户拜访行程',
+                          border: OutlineInputBorder(),
+                          isDense: true,
                         ),
-                ),
-              ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+                  // 开始/结束按钮
+                  SizedBox(
+                    width: 240,
+                    height: 52,
+                    child: _recording
+                        ? FilledButton(
+                            onPressed: _stopRecording,
+                            style: FilledButton.styleFrom(
+                              backgroundColor: const Color(0xFFE53935),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(24),
+                              ),
+                            ),
+                            child: const Text(
+                              '结束并保存',
+                              style: TextStyle(
+                                fontSize: 17,
+                                color: Colors.white,
+                              ),
+                            ),
+                          )
+                        : FilledButton(
+                            onPressed: _permissionGranted
+                                ? _startRecording
+                                : null,
+                            style: FilledButton.styleFrom(
+                              backgroundColor: const Color(0xFF4B5969),
+                              disabledBackgroundColor: Colors.grey.shade300,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(24),
+                              ),
+                            ),
+                            child: const Text(
+                              '开始记录',
+                              style: TextStyle(
+                                fontSize: 17,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
-      ),
       ),
     );
   }

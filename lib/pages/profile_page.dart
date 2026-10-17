@@ -100,10 +100,10 @@ class _ProfilePageState extends State<ProfilePage> {
   Widget build(BuildContext context) {
     final displayName = _nickname ?? widget.username ?? '未登录';
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5),
+      backgroundColor: const Color(0xFFF7F8FA),
       appBar: AppBar(
         title: const Text('个人信息'),
-        backgroundColor: const Color(0xFFF5F5F5),
+        backgroundColor: const Color(0xFFF7F8FA),
         foregroundColor: Colors.black,
       ),
       body: SafeArea(
@@ -116,7 +116,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 width: 80,
                 height: 80,
                 decoration: const BoxDecoration(
-                  color: Color(0xFF73ACF6),
+                  color: Color(0xFF4B5969),
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(Icons.person, size: 48, color: Colors.white),
@@ -179,7 +179,7 @@ class _ProfilePageState extends State<ProfilePage> {
               onTap: onEdit,
               child: const Text(
                 '修改',
-                style: TextStyle(color: Color(0xFF73ACF6), fontSize: 14),
+                style: TextStyle(color: Color(0xFF4B5969), fontSize: 14),
               ),
             ),
         ],

@@ -1,9 +1,10 @@
-import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:amap_flutter_base/amap_flutter_base.dart';
 import 'package:amap_flutter_map/amap_flutter_map.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/gestures.dart';
 
 import '../config/api_config.dart';
 import '../models/track.dart';
@@ -13,6 +14,7 @@ import '../services/api_client.dart';
 import '../services/auth_service.dart';
 import '../services/track_database.dart';
 import '../utils/geo_convert.dart';
+import '../widgets/track_detail_layout.dart';
 
 /// 轨迹详情页：高德地图渲染轨迹路径 + 起终点实心圆 + 语义标注 + 坐标点列表
 class TrackDetailPage extends StatefulWidget {
@@ -156,46 +158,22 @@ class _TrackDetailPageState extends State<TrackDetailPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5),
+      backgroundColor: const Color(0xFFF7F8FA),
       appBar: AppBar(
         title: const Text('轨迹详情'),
-        backgroundColor: const Color(0xFFF5F5F5),
+        backgroundColor: const Color(0xFFF7F8FA),
         foregroundColor: Colors.black,
       ),
       body: SafeArea(
-        child: Column(
-          children: [
-            // 地图区域
-            SizedBox(
-              height: 320,
-              child: _mapReady ? _buildMap() : _buildMapPlaceholder(),
-            ),
-            const SizedBox(height: 16),
-            // 轨迹信息卡片
-            _buildTrackInfoCard(),
-            if (_events.isNotEmpty || _eventsLoaded) ...[
-              const SizedBox(height: 16),
-              _buildEventsCard(),
-            ],
-            const SizedBox(height: 16),
-            // 坐标点列表
-            Expanded(
-              child: _points.isEmpty
-                  ? const Center(
-                      child: Text(
-                        '该轨迹暂无坐标点',
-                        style: TextStyle(color: Colors.grey, fontSize: 16),
-                      ),
-                    )
-                  : ListView.separated(
-                      padding: const EdgeInsets.symmetric(horizontal: 24),
-                      itemCount: _points.length,
-                      separatorBuilder: (_, _) => const SizedBox(height: 8),
-                      itemBuilder: (_, index) =>
-                          _buildPointItem(index, _points[index]),
-                    ),
-            ),
-          ],
+        child: TrackDetailLayout(
+          map: _mapReady ? _buildMap() : _buildMapPlaceholder(),
+          summary: _buildTrackInfoCard(),
+          events: _events.isNotEmpty || _eventsLoaded
+              ? _buildEventsCard()
+              : null,
+          pointCount: _points.length,
+          pointBuilder: (context, index) =>
+              _buildPointItem(index, _points[index]),
         ),
       ),
     );
@@ -203,16 +181,15 @@ class _TrackDetailPageState extends State<TrackDetailPage> {
 
   /// 高德地图：蓝色路径 + 起终点实心圆
   ///
-  /// <p>key 未配置时给一句明确说明，不静默渲染空白地图——
-  /// 空白地图看起来像"地图坏了"，而实际原因是构建时没带 --dart-define。</p>
+  /// Dart 参数优先；Android SDK 同时支持读取 Manifest 中的原生配置。
   Widget _buildMap() {
-    if (!ApiConfig.hasAmapKey) {
+    if (!ApiConfig.hasAmapKey &&
+        defaultTargetPlatform != TargetPlatform.android) {
       return const Center(
         child: Padding(
           padding: EdgeInsets.all(24),
           child: Text(
-            '未配置高德地图 key。\n'
-            '构建时请带 --dart-define=AMAP_KEY=你的key，详见 README。',
+            '地图暂不可用，请联系管理员检查地图服务配置。',
             textAlign: TextAlign.center,
             style: TextStyle(color: Colors.grey),
           ),
@@ -220,7 +197,15 @@ class _TrackDetailPageState extends State<TrackDetailPage> {
       );
     }
     return AMapWidget(
-      apiKey: AMapApiKey(androidKey: ApiConfig.amapKey),
+      // Android 未传 Dart Key 时交由 SDK 读取 Manifest 中已有配置，避免空值覆盖。
+      apiKey: ApiConfig.hasAmapKey
+          ? AMapApiKey(androidKey: ApiConfig.amapKey)
+          : null,
+      gestureRecognizers: <Factory<OneSequenceGestureRecognizer>>{
+        Factory<OneSequenceGestureRecognizer>(() => EagerGestureRecognizer()),
+      },
+      scrollGesturesEnabled: true,
+      zoomGesturesEnabled: true,
       privacyStatement: const AMapPrivacyStatement(
         hasContains: true,
         hasShow: true,
@@ -253,7 +238,7 @@ class _TrackDetailPageState extends State<TrackDetailPage> {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        border: Border.all(color: Colors.black, width: 1),
+        border: Border.all(color: const Color(0xFFE8EAED), width: 1),
         borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
@@ -295,7 +280,7 @@ class _TrackDetailPageState extends State<TrackDetailPage> {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        border: Border.all(color: Colors.black, width: 1),
+        border: Border.all(color: const Color(0xFFE8EAED), width: 1),
         borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
@@ -306,7 +291,7 @@ class _TrackDetailPageState extends State<TrackDetailPage> {
               const Icon(
                 Icons.auto_awesome,
                 size: 16,
-                color: Color(0xFF73ACF6),
+                color: Color(0xFF4B5969),
               ),
               const SizedBox(width: 6),
               const Text(
@@ -326,21 +311,14 @@ class _TrackDetailPageState extends State<TrackDetailPage> {
               style: TextStyle(color: Colors.grey, fontSize: 13),
             )
           else
-            // 事件条数不多，但每条含理由，给个上限内部滚动，
-            // 免得把下面的坐标点列表挤到看不见
-            ConstrainedBox(
-              constraints: const BoxConstraints(maxHeight: 168),
-              child: SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    for (var i = 0; i < _events.length; i++) ...[
-                      if (i > 0) const Divider(height: 20),
-                      _buildEventRow(_events[i]),
-                    ],
-                  ],
-                ),
-              ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                for (var i = 0; i < _events.length; i++) ...[
+                  if (i > 0) const Divider(height: 20),
+                  _buildEventRow(_events[i]),
+                ],
+              ],
             ),
         ],
       ),
@@ -418,7 +396,7 @@ class _TrackDetailPageState extends State<TrackDetailPage> {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
         color: Colors.white,
-        border: Border.all(color: Colors.black, width: 1),
+        border: Border.all(color: const Color(0xFFE8EAED), width: 1),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
@@ -434,7 +412,7 @@ class _TrackDetailPageState extends State<TrackDetailPage> {
             child: Text(
               '${index + 1}',
               style: const TextStyle(
-                color: Color(0xFF73ACF6),
+                color: Color(0xFF4B5969),
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
               ),
